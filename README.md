@@ -39,3 +39,30 @@ WHERE age = 15 AND name != "barry" OR is_employee = true OR birthday IS null
 AND name in ("edwin","leo","jack","stacy")
 AND age not in (16,24,32) ORDER BY birthday DESC,name ASC LIMIT 36, 10
 ```
+
+## Build INSERT SQL 创建基本的 insert 语句
+
+```golang
+import (
+    gosqler "github.com/tingxin/go-sqler"
+    "fmt"
+)
+
+query := gosqler.NewInsert("users")
+query.AddColumns("name", "age", "sex", "birthday", "is_employee")
+query.AddValues("barry", 30, "male", "1987-01-15", true)
+query.AddValues("edwin", 35, "male", "1982-01-15", true)
+query.AddValues("stacy", 32.5, "female", "1986-01-15", true)
+
+str := query.String()
+fmt.Println(str)
+```
+
+output:
+
+```sql
+INSERT INTO users ( name,age,sex,birthday,is_employee )
+VALUES ("barry",30,"male","1987-01-15",true),
+("edwin",35,"male","1982-01-15",true),
+("stacy",32.5,"female","1986-01-15",true)
+```
