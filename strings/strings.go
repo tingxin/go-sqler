@@ -9,16 +9,20 @@ import (
 var (
 	sqlCharPattern *regexp.Regexp
 	escapeRep      map[string]string
+
+	operators map[string]bool
 )
 
 func init() {
 	initSQLCharPattern()
+	initOperators()
 
 }
 
 func initSQLCharPattern() {
 	rep := make(map[string]string)
 	rep["'"] = "‘"
+	rep["\""] = "‘"
 	rep[";"] = "；"
 	rep[","] = "，"
 	rep["<"] = "＜"
@@ -48,6 +52,29 @@ func initSQLCharPattern() {
 	sqlCharPattern = pattern
 }
 
+func initOperators() {
+	operators = make(map[string]bool)
+	operators[">"] = true
+	operators["<"] = true
+	operators[">="] = true
+	operators["<="] = true
+	operators["!"] = true
+	operators["!>"] = true
+	operators["LIKE"] = true
+	operators["like"] = true
+
+	operators["="] = true
+	operators["!="] = true
+	operators["IS"] = true
+	operators["IS NOT"] = true
+	operators["is"] = true
+	operators["is not"] = true
+	operators["in"] = true
+	operators["IN"] = true
+	operators["not in"] = true
+	operators["NOT IN"] = true
+}
+
 // FilterSQL used to filter the unsupport string in sql
 func FilterSQL(sql string) string {
 	return sqlCharPattern.ReplaceAllStringFunc(sql, func(match string) string {
@@ -66,7 +93,7 @@ func GetSQLStr(v interface{}) string {
 		part := FilterSQL(strV)
 		part = fmt.Sprintf("\"%s\"", part)
 		return part
-	case int, uint16, int32, int64, uint, uint8, bool:
+	case int, uint16, int32, int64, uint, uint8, bool, float32, float64:
 		return fmt.Sprintf("%v", v)
 	case []string:
 		values := v.([]string)
@@ -94,6 +121,9 @@ func GetSQLStr(v interface{}) string {
 
 // GetSQLOper used to decorate condition operator
 func GetSQLOper(operator string, v interface{}) string {
+	if _, ok := operators[operator]; !ok {
+		panic(fmt.Sprintf("gosqler does not support operator %s", operator))
+	}
 	if v == nil {
 		if operator == "=" {
 			return "IS"
