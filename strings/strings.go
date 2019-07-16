@@ -93,7 +93,7 @@ func GetSQLStr(v interface{}) string {
 		part := FilterSQL(strV)
 		part = fmt.Sprintf("\"%s\"", part)
 		return part
-	case int, uint16, int32, int64, uint, uint8, bool, float32, float64:
+	case int8, int, uint16, int32, int64, uint, uint8, bool, float32, float64:
 		return fmt.Sprintf("%v", v)
 	case []string:
 		values := v.([]string)
