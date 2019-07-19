@@ -11,14 +11,16 @@ import (
 type Insert interface {
 	AddColumns(fields ...string) error
 	AddValues(values ...interface{}) error
+	ClearValues() error
 	String() string
 }
 
 // inserter used to build where condition
 type inserter struct {
-	tableName string
-	columns   []string
-	pairs     [][]string
+	tableName   string
+	columns     []string
+	pairs       [][]string
+	columnCount int
 }
 
 // NewInsert used to create where object
@@ -26,18 +28,24 @@ func NewInsert(tableName string) Insert {
 	p := &inserter{}
 	p.tableName = tableName
 	p.pairs = make([][]string, 0)
+	p.columnCount = 0
 	return p
 }
 
 func (p *inserter) AddColumns(fields ...string) error {
 	p.columns = fields
+	p.columnCount = len(p.columns)
 	return nil
 }
 
 func (p *inserter) AddValues(values ...interface{}) error {
 	count := len(values)
-	if count != len(p.columns) {
-		return fmt.Errorf("The count of values and columns are not match")
+	if p.columnCount == 0 {
+		p.columnCount = count
+	}
+	if p.columnCount > 0 && count != p.columnCount {
+		err := fmt.Errorf("The count of values and columns are not match")
+		panic(err)
 	}
 
 	parts := make([]string, count, count)
@@ -45,6 +53,11 @@ func (p *inserter) AddValues(values ...interface{}) error {
 		parts[i] = str.GetSQLStr(v)
 	}
 	p.pairs = append(p.pairs, parts)
+	return nil
+}
+
+func (p *inserter) ClearValues() error {
+	p.pairs = make([][]string, 0)
 	return nil
 }
 
@@ -56,7 +69,11 @@ func (p *inserter) String() string {
 	cache = append(cache, strings.Join(p.columns, ","))
 	cache = append(cache, ") VALUES")
 
-	values := make([]string, len(p.pairs))
+	count := len(p.pairs)
+	if count == 0 {
+		return ""
+	}
+	values := make([]string, count)
 	for i, p := range p.pairs {
 		t := strings.Join(p, ",")
 		tquto := fmt.Sprintf("(%s)", t)
