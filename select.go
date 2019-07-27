@@ -15,7 +15,8 @@ var (
 
 // Select used to express select sql
 type Select interface {
-	sql.Where
+	sql.Wherer
+	sql.Haver
 	Select(fields ...string)
 	Choice(field string)
 	From(tableNames ...string)
@@ -25,6 +26,10 @@ type Select interface {
 	FullJoin(table string, conditions ...string)
 	Orderby(field string, desc bool)
 	GroupBy(fields ...string)
+	BeginWhere()
+	EndWhere()
+	BeginHaving()
+	EndHaving()
 	Limit(count int)
 	Offset(offset int)
 	String() string
@@ -32,7 +37,6 @@ type Select interface {
 
 // Where used to build where condition
 type selecter struct {
-	sql.Wherer
 	selectCache []string
 	fromCache   []string
 	groupCache  []string
@@ -40,6 +44,9 @@ type selecter struct {
 	joinCache   []string
 	limit       int
 	offset      int
+
+	where  sql.Filter
+	having sql.Filter
 }
 
 // NewSelect used to create where object
@@ -48,6 +55,8 @@ func NewSelect() Select {
 
 	query.offset = 0
 	query.limit = -1
+
+	query.having = sql.NewFilter("Having")
 	return query
 }
 
@@ -92,6 +101,38 @@ func (p *selecter) FullJoin(table string, conditions ...string) {
 	p.joinBy("FULL", table, conditions...)
 }
 
+// Where used to add where condition
+func (p *selecter) Where(field, operator string, value interface{}) {
+	if p.where == nil {
+		p.where = sql.NewFilter("WHERE")
+	}
+
+	p.where.And(field, operator, value)
+}
+
+// AndWhere used to add where condition
+func (p *selecter) AndWhere(field, operator string, value interface{}) {
+	p.where.And(field, operator, value)
+}
+
+// OrWhere used to add where condition
+func (p *selecter) OrWhere(field, operator string, value interface{}) {
+	p.where.OR(field, operator, value)
+}
+
+func (p *selecter) BeginWhere() {
+	if p.where == nil {
+		p.where = sql.NewFilter("WHERE")
+	}
+	p.where.BeginGroup()
+}
+func (p *selecter) EndWhere() {
+	if p.where == nil {
+		panic("Call BeginWhere First")
+	}
+	p.where.EndGroup()
+}
+
 func (p *selecter) Orderby(field string, desc bool) {
 	if p.orderCache == nil {
 		p.orderCache = make([]string, 1, 1)
@@ -119,6 +160,30 @@ func (p *selecter) GroupBy(fields ...string) {
 
 }
 
+func (p *selecter) Having(field, operator string, value interface{}) {
+	if p.having == nil {
+		p.having = sql.NewFilter("HAVING")
+	}
+	p.having.And(field, operator, value)
+}
+func (p *selecter) AndHaving(field, operator string, value interface{}) {
+	p.having.And(field, operator, value)
+}
+func (p *selecter) OrHaving(field, operator string, value interface{}) {
+	p.having.OR(field, operator, value)
+}
+func (p *selecter) BeginHaving() {
+	if p.having == nil {
+		p.having = sql.NewFilter("HAVING")
+	}
+	p.having.BeginGroup()
+}
+func (p *selecter) EndHaving() {
+	if p.having == nil {
+		panic("Call BeginHaving First")
+	}
+	p.having.EndGroup()
+}
 func (p *selecter) Limit(count int) {
 	p.limit = count
 }
@@ -144,7 +209,7 @@ func (p *selecter) String() string {
 		cache = append(cache, joinStr)
 	}
 
-	whereStr := p.Wherer.String()
+	whereStr := p.where.String()
 	if whereStr != "" {
 		cache = append(cache, whereStr)
 	}
@@ -153,6 +218,11 @@ func (p *selecter) String() string {
 		groupStr := strings.Join(p.groupCache, ",")
 		cache = append(cache, "GROUP BY")
 		cache = append(cache, groupStr)
+	}
+
+	havingStr := p.having.String()
+	if havingStr != "" {
+		cache = append(cache, havingStr)
 	}
 
 	if p.orderCache != nil {
