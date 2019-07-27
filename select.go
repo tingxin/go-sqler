@@ -1,21 +1,32 @@
 package gosqler
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
 	"github.com/tingxin/go-sqler/sql"
 )
 
+var (
+	// ErrorEmptyParams occur when param is empty
+	ErrorEmptyParams = errors.New("params should not be empty")
+)
+
 // Select used to express select sql
 type Select interface {
 	sql.Where
 	Select(fields ...string)
+	Choice(field string)
 	From(tableNames ...string)
+	Join(table string, conditions ...string)
+	LeftJoin(table string, conditions ...string)
+	RightJoin(table string, conditions ...string)
+	FullJoin(table string, conditions ...string)
 	Orderby(field string, desc bool)
 	GroupBy(fields ...string)
 	Limit(count int)
-	Offset(count int)
+	Offset(offset int)
 	String() string
 }
 
@@ -26,6 +37,7 @@ type selecter struct {
 	fromCache   []string
 	groupCache  []string
 	orderCache  []string
+	joinCache   []string
 	limit       int
 	offset      int
 }
@@ -47,12 +59,37 @@ func (p *selecter) Select(fields ...string) {
 	}
 }
 
+func (p *selecter) Choice(field string) {
+	if p.selectCache == nil {
+		p.selectCache = make([]string, 1, 1)
+		p.selectCache[0] = field
+	} else {
+		p.selectCache = append(p.selectCache, field)
+	}
+}
+
 func (p *selecter) From(tableNames ...string) {
 	if p.fromCache == nil {
 		p.fromCache = tableNames
 	} else {
 		p.fromCache = append(p.fromCache, tableNames...)
 	}
+}
+
+func (p *selecter) Join(table string, conditions ...string) {
+	p.joinBy("INNER", table, conditions...)
+}
+
+func (p *selecter) LeftJoin(table string, conditions ...string) {
+	p.joinBy("LEFT", table, conditions...)
+}
+
+func (p *selecter) RightJoin(table string, conditions ...string) {
+	p.joinBy("RIGHT", table, conditions...)
+}
+
+func (p *selecter) FullJoin(table string, conditions ...string) {
+	p.joinBy("FULL", table, conditions...)
 }
 
 func (p *selecter) Orderby(field string, desc bool) {
@@ -102,6 +139,11 @@ func (p *selecter) String() string {
 	cache[2] = "FROM"
 	cache[3] = fromStr
 
+	if len(p.joinCache) > 0 {
+		joinStr := strings.Join(p.joinCache, " ")
+		cache = append(cache, joinStr)
+	}
+
 	whereStr := p.Wherer.String()
 	if whereStr != "" {
 		cache = append(cache, whereStr)
@@ -130,4 +172,20 @@ func (p *selecter) String() string {
 	}
 
 	return strings.Join(cache, " ")
+}
+
+func (p *selecter) joinBy(typeStr, table string, conditions ...string) {
+	if table == "" || len(conditions) == 0 {
+		panic(ErrorEmptyParams)
+	}
+	head := fmt.Sprintf("%s JOIN %s ON", typeStr, table)
+	body := strings.Join(conditions, " AND ")
+	if p.joinCache == nil {
+		p.joinCache = make([]string, 2, 2)
+		p.joinCache[0] = head
+		p.joinCache[1] = body
+	} else {
+		p.joinCache = append(p.joinCache, head)
+		p.joinCache = append(p.joinCache, body)
+	}
 }

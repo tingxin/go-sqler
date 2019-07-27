@@ -44,6 +44,11 @@ func (p *Wherer) OrWhere(field, operator string, value interface{}) {
 	p.add("OR", field, operator, value)
 }
 
+func (p *Wherer) String() string {
+	whereStr := strings.Join(p.cache, " ")
+	return whereStr
+}
+
 func (p *Wherer) add(prefix, field, operator string, value interface{}) {
 	if p.cache == nil {
 		panic("need call Where method first")
@@ -52,9 +57,4 @@ func (p *Wherer) add(prefix, field, operator string, value interface{}) {
 	op := str.GetSQLOper(operator, value)
 	condition := fmt.Sprintf("%s %s %s %s", prefix, field, op, v)
 	p.cache = append(p.cache, condition)
-}
-
-func (p *Wherer) String() string {
-	whereStr := strings.Join(p.cache, " ")
-	return whereStr
 }
