@@ -75,6 +75,7 @@ func TestSelectWithJoin(t *testing.T) {
 }
 
 func TestSelectWithGroupAndHaving(t *testing.T) {
+
 	query := gosqler.NewSelect()
 	df := "DATE_FORMAT(%s.%s,'%s') as dt"
 	createTime := fmt.Sprintf(df, "c", "create_time", "%Y-%m")
