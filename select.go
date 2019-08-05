@@ -56,7 +56,6 @@ func NewSelect() Select {
 	query.offset = 0
 	query.limit = -1
 
-	query.having = sql.NewFilter("Having")
 	return query
 }
 
@@ -209,9 +208,11 @@ func (p *selecter) String() string {
 		cache = append(cache, joinStr)
 	}
 
-	whereStr := p.where.String()
-	if whereStr != "" {
-		cache = append(cache, whereStr)
+	if p.where != nil {
+		whereStr := p.where.String()
+		if whereStr != "" {
+			cache = append(cache, whereStr)
+		}
 	}
 
 	if p.groupCache != nil {
@@ -220,9 +221,11 @@ func (p *selecter) String() string {
 		cache = append(cache, groupStr)
 	}
 
-	havingStr := p.having.String()
-	if havingStr != "" {
-		cache = append(cache, havingStr)
+	if p.having != nil {
+		havingStr := p.having.String()
+		if havingStr != "" {
+			cache = append(cache, havingStr)
+		}
 	}
 
 	if p.orderCache != nil {

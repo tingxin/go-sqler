@@ -12,6 +12,20 @@ func TestSelectBasc(t *testing.T) {
 	query := gosqler.NewSelect()
 	query.Select("name", "age", "sex", "birthday", "is_employee")
 	query.From("users")
+	expected := `SELECT name,age,sex,birthday,is_employee,address FROM users`
+	queryStr := query.String()
+
+	result := compareStr(expected, queryStr)
+
+	if result {
+		t.Errorf("\nExpected:\n%s\nActually:\n%s\n", expected, queryStr)
+	}
+}
+
+func TestSelectBasc1(t *testing.T) {
+	query := gosqler.NewSelect()
+	query.Select("name", "age", "sex", "birthday", "is_employee")
+	query.From("users")
 	query.Where("age", "=", 15)
 	query.AndWhere("name", "!=", "barry")
 	query.OrWhere("is_employee", "=", true)
